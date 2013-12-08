@@ -14,101 +14,86 @@ using namespace std;
 class Sudoku {
 	vector<vector<char> > board;
 	vector<vector<int> > note; // possible answers
-	vector<vector<int> > note_cnt; // count of possible answers
 	queue<int> qi, qj; // single answer positions
     static const int N = 9;
 
 public:
 	Sudoku(const vector<vector<char> > &board) : board(board) {
 		note = vector<vector <int> > (N, vector<int> (N, 511));
-		note_cnt = vector<vector <int> > (N, vector<int> (N, N));
 
         // initialize notes
         for (int i = 0; i < N; i++)
             for (int j = 0; j < N; j++)
                 if (board[i][j] != '.') {
                     note[i][j] = 0;
-					note_cnt[i][j] = 0;
                     updateNote(i, j);
                 }
 	}
 
 	Sudoku(const Sudoku *p) : board(p->board), 
 							  note(p->note),
-							  note_cnt(p->note_cnt),
 							  qi(p->qi), qj(p->qj) {
 	}
 
-	inline int testIJ(int flag, int i, int j) {
+	inline void testIJ(int flag, int i, int j) {
 		if (note[i][j] & flag) {
-	        note[i][j] &= ~flag;
-			if (--note_cnt[i][j] == 0) // board invalid
-				return -1;
-			else if (note_cnt[i][j] == 1) // single answer reached
+			note[i][j] &= ~flag;
+			if (note[i][j] && (note[i][j] & (note[i][j] - 1)) == 0)
 				qi.push(i), qj.push(j);
 		}
-		return 0;
 	}
 
-	int updateNote(int x, int y) {
-        int flag = 1 << (board[x][y]-'1');
-        for (int j = 0; j < N; j++)
-			if (testIJ(flag, x, j) == -1)
-				return -1;
-        for (int i = 0; i < N; i++)
-			if (testIJ(flag, i, y) == -1)
-				return -1;
-        for (int i = x/3*3; i < x/3*3 + 3; i++) {
-            for (int j = y/3*3; j < y/3*3 + 3; j++) {
-				if (testIJ(flag, i, j) == -1)
-					return -1;
-			}
-		}
-		return 0;
-    }
+	void updateNote(int n, int x, int y) {
+		int flag = 1 << (n-1);
+		for (int j = 0; j < N; j++)
+			testIJ(flag, x, j);
+		for (int i = 0; i < N; i++)
+			testIJ(flag, i, y);
+		for (int i = x/3*3; i < x/3*3 + 3; i++)
+			for (int j = y/3*3; j < y/3*3 + 3; j++)
+				testIJ(flag, i, j);
+	}
 
 	bool solve() {
-		// solve single answer positions
-		while (!qi.empty()) {
+		while (!qi.empty()) { // solve single answer positions
 			int i = qi.front();
 			int j = qj.front();
 			qi.pop(), qj.pop();
 
-            board[i][j] = '1';
-            while (note[i][j] >>= 1)
-                board[i][j]++;
-            if (updateNote(i, j) == -1)
+			if (note[i][j] == 0) // number no longer posible
 				return false;
+
+			board[i][j] = '1';
+			while (note[i][j] >>= 1)
+				board[i][j]++;
+			updateNote(board[i][j]-'0', i, j);
 		}
 
-		int mincnt = N;
-		int imin = 0, jmin = 0;
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-				if (board[i][j] == '.' && note_cnt[i][j] < mincnt) {
-					mincnt = note_cnt[i][j];
+		int imin = -1, jmin = -1;
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < N; j++) {
+				if (board[i][j] == '.') { // find a empty position
 					imin = i;
 					jmin = j;
+					break;
 				}
 			}
+			if (imin != -1) // break nested loop
+				break;
 		}
-		if (mincnt == N) // solved
+		if (imin == -1) // solved
 			return true;
-
-        // solve remaining recursively
-		int n = 0;
 		int noteij = note[imin][jmin];
 		note[imin][jmin] = 0;
-		note_cnt[imin][jmin] = 0;
-		while (mincnt--) {
-			while ((noteij & (1 << n)) == 0)
-                n++;
-			board[imin][jmin] = ++n + '0';
+		for (int n = 0; n < N; n++) {
+			if ((noteij & (1 << n)) == 0)
+				continue;
+			board[imin][jmin] = n + '1';
 			Sudoku sub(this);
-			if ((sub.updateNote(imin, jmin) != -1) && sub.solve()) {
+			sub.updateNote(n+1, imin, jmin);
+			if (sub.solve()) {
 				board = sub.board;
 				note = sub.note;
-				note_cnt = sub.note_cnt;
 				return true;
 			}
 		}
