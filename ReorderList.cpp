@@ -22,16 +22,44 @@ struct ListNode {
 class Solution {
 public:
     void reorderList(ListNode *head) {
-        vector<ListNode *> plist;
-        for (ListNode *p = head; p != NULL; p = p->next)
-            plist.push_back(p);
-        int n = plist.size();
-        int i, j;
-        for (i = 0, j = n-1; i < j; ++i, --j) {
-            plist[j]->next = plist[i]->next;
-            plist[i]->next = plist[j];
+        ListNode *p1, *p2;
+        p1 = p2 = head;
+        while (p2 && p2->next) {
+            p1 = p1->next;
+            p2 = p2->next->next;
         }
-        if (i > 0)
-            plist[i]->next = NULL;
+        if (p1 == p2 || p1->next == NULL)
+            return;
+
+        p2 = ReverseList(p1->next);
+        p1->next = NULL;
+        p1 = head;
+
+        // MergeList(p1, p2), assuming p1 is not shorter than p2
+        while (p1 && p2) {
+            ListNode *p = p1->next;
+            p1->next = p2;
+            p1 = p;
+            p = p2->next;
+            p2->next = p1;
+            p2 = p;
+        }
+
     }
+
+    ListNode* ReverseList(ListNode *head) {
+        if (head == NULL)
+            return head;
+        ListNode *p = head->next;
+        head->next = NULL;
+
+        while (p) {
+            ListNode *p2 = head;
+            head = p;
+            p = p->next;
+            head->next = p2;
+        }
+        return head;
+    }
+
 };
