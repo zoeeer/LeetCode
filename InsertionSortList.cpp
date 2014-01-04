@@ -31,6 +31,8 @@ public:
                 pre = p;
         }
 
-        return head->next;
+        pre = head; head = head->next;
+        delete pre;
+        return head;
     }
 };

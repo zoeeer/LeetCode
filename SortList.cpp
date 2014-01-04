@@ -41,7 +41,10 @@ class Solution {
             p = p->next;
         }
         p->next = L1 ? L1 : L2;
-        return head0->next;
+
+        p = head0->next;
+        delete head0;
+        return p;
     }
 
 public:
